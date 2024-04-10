@@ -1,0 +1,50 @@
+trigger:
+  - master
+
+variables:
+  - name: workingDic
+    value: $(System.DefaultWorkingDirectory)
+
+stages:
+  - stage: validate
+
+    jobs:
+      - job: Compliance
+        displayName: "Run Terrascan to check for compliance"
+        pool:
+          vmImage: "ubuntu-latest"
+
+        steps:
+          - task: TerraformInstaller@0
+            displayName: Install terraform
+            inputs:
+              terraformVersion: 0.13.5
+
+          - script: |
+              curl --location https://github.com/accurics/terrascan/releases/download/v1.4.0/terrascan_1.4.0_Linux_x86_64.tar.gz --output terrascan.tar.gz
+              tar -xf terrascan.tar.gz && rm terrascan.tar.gz
+              sudo install terrascan /usr/local/bin && rm terrascan
+              terrascan
+            displayName: "Install terrascan"
+          - script: |
+              mkdir $(workingDic)/result-terranscan
+              terrascan init
+              terrascan scan --directory ./
+            displayName: "Scan source"
+            continueOnError: true
+          # - script: |
+          #     pip3 install terrascan
+          #   displayName: "Get tools"
+
+          # - script: |
+          #     mkdir $(workingDic)/result-terranscan
+          #     touch $(workingDic)/result-terranscan/result-scan.xml
+          #     terrascan -l $(workingDic) -d -r $(workingDic)/result-terranscan/result-scan.xml
+          #   workingDirectory: $(workingDic)
+          #   displayName: "Run terrascan"
+          #   continueOnError: true
+
+          # - script: |
+          #     cat $(workingDic)/result-terranscan/result-scan.xml
+          #   workingDirectory: $(workingDic)
+          #   displayName: view-result

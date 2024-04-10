@@ -1,0 +1,48 @@
+trigger:
+  branches:
+    include:
+      - master
+
+pool:
+  vmImage: "ubuntu-latest"
+
+variables:
+  - group: aws-terrform-provider
+  - name: output_tf_plan
+    value: aws-account-595579306546.tfplan
+  - name: aws-terraform-connection
+    value: aws-account-595579306546-connection
+  - name: folder_working
+    value: aws-account-595579306546
+
+steps:
+  - task: TerraformInstaller@0
+    displayName: Install terraform
+    inputs:
+      terraformVersion: 0.13.5
+
+  - task: TerraformTaskV2@2
+    displayName: "Terraform : init"
+    inputs:
+      provider: aws
+      command: init
+      workingDirectory: "$(System.DefaultWorkingDirectory)"
+      backendServiceAWS: $(aws-terraform-connection)
+      backendAWSBucketName: terraform-provision
+      backendAWSKey: ezservices/terraform_state.tfstate
+  - task: TerraformTaskV2@2
+    displayName: "Terraform : plan"
+    inputs:
+      provider: aws
+      command: plan
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      commandOptions: -var "region=$(region)" -var "access_key=$(access_key)" -var "secret_key=$(secret_key)" -out $(output_tf_plan)
+      environmentServiceNameAWS: $(aws-terraform-connection)
+  - task: TerraformTaskV2@2
+    displayName: "Terraform : apply"
+    inputs:
+      provider: aws
+      command: apply
+      workingDirectory: $(System.DefaultWorkingDirectory)
+      commandOptions: $(output_tf_plan)
+      environmentServiceNameAWS: $(aws-terraform-connection)
